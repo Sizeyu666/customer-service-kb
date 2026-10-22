@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+.env
+data/uploads/*
+data/vector_store/*
+data/*.db
+*.pyc
+.idea/
+.vscode/
+
+# 保留空目录占位
+data/uploads/*
+!data/uploads/.gitkeep
+data/vector_store/*
+!data/vector_store/.gitkeep

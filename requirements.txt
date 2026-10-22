@@ -1,0 +1,24 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+sqlalchemy>=2.0
+pydantic>=2.6
+pydantic-settings>=2.2
+PyJWT>=2.8
+bcrypt>=4.1
+python-multipart>=0.0.9
+jinja2>=3.1
+itsdangerous>=2.1
+langchain>=0.3
+langchain-core>=0.3
+langchain-community>=0.3
+langchain-openai>=0.2
+langchain-chroma>=0.1.4
+langchain-text-splitters>=0.3
+chromadb>=0.5
+pypdf>=4.0
+python-docx>=1.1
+openai>=1.40
+python-dotenv>=1.0
+PyMySQL>=1.1
+cryptography>=42.0
+pysqlite3-binary; sys_platform == "linux"
