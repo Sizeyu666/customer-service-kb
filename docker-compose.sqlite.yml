@@ -1,0 +1,13 @@
+# 小内存机器（约 2G）单机版：仅 app 服务 + SQLite，不启动 MySQL/Nginx
+# 用法：docker compose -f docker-compose.sqlite.yml up -d --build
+services:
+  app:
+    build: .
+    container_name: cs_kb_app
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./hf_cache:/app/hf_cache

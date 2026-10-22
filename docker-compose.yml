@@ -1,0 +1,53 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: cs_kb_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change-me-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-cs_kb}
+      MYSQL_USER: ${MYSQL_USER:-cs_kb}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change-me}
+      TZ: Asia/Shanghai
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    # 仅内网访问，不对外映射端口
+    expose:
+      - "3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-change-me-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: cs_kb_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      # 覆盖 .env 中的 SQLite 连接，指向容器内 MySQL
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-cs_kb}:${MYSQL_PASSWORD:-change-me}@db:3306/${MYSQL_DATABASE:-cs_kb}?charset=utf8mb4
+    volumes:
+      - ./data:/app/data          # 上传文件与向量库持久化
+      - ./hf_cache:/app/hf_cache  # 本地 embedding 模型缓存，避免重复下载
+    expose:
+      - "8000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: cs_kb_nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  mysql_data:
