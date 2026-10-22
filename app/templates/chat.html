@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}客服问答 · {{ app_name }}{% endblock %}
+{% block page %}chat{% endblock %}
+
+{% block body %}
+<main class="chat-page">
+  <div class="chat-layout">
+    <aside class="conversation-panel">
+      <div class="panel-head">
+        <button class="btn btn-primary btn-sm flex-fill" id="newConvBtn" type="button">
+          <i class="bi bi-plus-lg me-1"></i>新会话
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" id="refreshBtn" type="button" title="刷新会话列表">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+      </div>
+      <div class="conversation-list" id="convList">
+        <div class="loading"><span class="spinner-border spinner-border-sm text-primary"></span>加载中…</div>
+      </div>
+    </aside>
+
+    <section class="chat-main">
+      <div class="chat-head">
+        <div>
+          <div class="title" id="chatTitle">客服问答</div>
+          <div class="meta" id="chatMeta">基于企业知识库回答，回答末尾附参考来源</div>
+        </div>
+        <span class="badge bg-secondary" id="msgCount">0 条消息</span>
+      </div>
+
+      <div class="chat-scroll" id="chatScroll">
+        <div class="chat-empty" id="chatEmpty">
+          <i class="bi bi-chat-square-text" style="font-size:30px;color:var(--fg-subtle)"></i>
+          <div>
+            <div style="font-weight:600;color:var(--fg);margin-bottom:4px">开始一段新的咨询</div>
+            <div style="font-size:13.5px">回答只依据管理员上传的知识库内容，找不到依据会提示联系人工客服</div>
+          </div>
+          <div class="hint-cards">
+            <button class="hint-card" type="button">支持七天无理由退货吗</button>
+            <button class="hint-card" type="button">退货运费谁承担</button>
+            <button class="hint-card" type="button">怎么开发票</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input">
+        <div class="input-row">
+          <textarea id="questionInput" rows="1" placeholder="请输入您的问题，例如：支持七天无理由退货吗？"></textarea>
+          <button class="btn btn-primary" id="sendBtn" type="button">发送</button>
+        </div>
+        <div class="tip">Enter 发送，Shift + Enter 换行</div>
+      </div>
+    </section>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/chat.js"></script>
+{% endblock %}

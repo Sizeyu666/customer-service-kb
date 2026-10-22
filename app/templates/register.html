@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}注册 · {{ app_name }}{% endblock %}
+{% block page %}register{% endblock %}
+{% block navbar %}{% endblock %}
+
+{% block body %}
+<main class="auth-page">
+  <div class="auth-card">
+    <div class="brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        <path d="M8 9h8M8 13h5"></path>
+      </svg>
+      <span>{{ app_name }}</span>
+    </div>
+
+    <h1>创建账号</h1>
+    <p class="sub">首个注册的账号将自动成为系统管理员</p>
+
+    <div class="form-error" id="formError"></div>
+
+    <form id="registerForm" novalidate>
+      <div class="mb-3">
+        <label class="form-label" for="username">用户名</label>
+        <input class="form-control" id="username" name="username" autocomplete="username" placeholder="3-32 位，支持中英文、数字、下划线" required>
+        <div class="form-text">注册后不可修改，请谨慎填写</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="password">密码</label>
+        <input class="form-control" id="password" name="password" type="password" autocomplete="new-password" placeholder="至少 6 位" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="confirm">确认密码</label>
+        <input class="form-control" id="confirm" name="confirm" type="password" autocomplete="new-password" placeholder="请再次输入密码" required>
+      </div>
+      <button class="btn btn-primary w-100" id="submitBtn" type="submit">注册</button>
+    </form>
+
+    <div class="switch">已有账号？<a href="/login">返回登录</a></div>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const form = document.getElementById('registerForm');
+  const errorBox = document.getElementById('formError');
+  const submitBtn = document.getElementById('submitBtn');
+
+  function showError(message) {
+    errorBox.textContent = message;
+    errorBox.classList.add('show');
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    errorBox.classList.remove('show');
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm').value;
+
+    if (!username || !password) {
+      showError('请填写用户名和密码');
+      return;
+    }
+    if (password.length < 6) {
+      showError('密码长度至少 6 位');
+      return;
+    }
+    if (password !== confirm) {
+      showError('两次输入的密码不一致');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '注册中…';
+    try {
+      await authFetch('/api/auth/register', {
+        method: 'POST',
+        body: { username, password },
+      });
+      location.href = '/login?registered=1';
+    } catch (err) {
+      showError(err.message || '注册失败，请稍后重试');
+      submitBtn.disabled = false;
+      submitBtn.textContent = '注册';
+    }
+  });
+</script>
+{% endblock %}

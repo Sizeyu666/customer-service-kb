@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}知识库管理 · {{ app_name }}{% endblock %}
+{% block page %}documents{% endblock %}
+
+{% block body %}
+<main class="page-wrap">
+  <div id="pageBody">
+    <div class="page-head">
+      <div>
+        <h1>知识库管理</h1>
+        <p class="sub">上传 PDF / DOCX / TXT / MD 文档，系统自动解析、切分并写入向量库，客服回答只依据这里的知识</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-outline-secondary btn-sm" id="refreshBtn" type="button">
+          <i class="bi bi-arrow-clockwise me-1"></i>刷新
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" id="rebuildBtn" type="button">
+          <i class="bi bi-arrow-repeat me-1"></i>全部重建索引
+        </button>
+        <button class="btn btn-primary btn-sm" id="uploadBtn" type="button" data-bs-toggle="modal" data-bs-target="#uploadModal">
+          <i class="bi bi-cloud-arrow-up me-1"></i>上传文档
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th style="width:34%">文件名</th>
+              <th style="width:8%">类型</th>
+              <th style="width:12%">状态</th>
+              <th style="width:8%">文本块</th>
+              <th style="width:19%">上传时间</th>
+              <th style="width:10%" class="text-end">操作</th>
+            </tr>
+          </thead>
+          <tbody id="docBody"></tbody>
+        </table>
+      </div>
+      <div id="docState"></div>
+    </div>
+  </div>
+</main>
+
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">上传知识库文档</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        <div class="dropzone" id="dropzone">
+          <i class="bi bi-cloud-arrow-up"></i>
+          <div class="main">点击选择文件，或将文件拖拽到此处</div>
+          <div class="hint">支持 PDF、DOCX、TXT、MD，单个文件不超过 20MB，可多选</div>
+          <input type="file" id="fileInput" class="hidden" multiple accept=".pdf,.docx,.txt,.md">
+        </div>
+        <ul class="file-list" id="fileList"></ul>
+        <div class="alert alert-light border mt-3 mb-0 hidden" id="uploadTip"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">取消</button>
+        <button class="btn btn-primary" type="button" id="confirmUpload">开始上传并索引</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/documents.js"></script>
+{% endblock %}

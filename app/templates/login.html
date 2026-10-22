@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}登录 · {{ app_name }}{% endblock %}
+{% block page %}login{% endblock %}
+{% block navbar %}{% endblock %}
+
+{% block body %}
+<main class="auth-page">
+  <div class="auth-card">
+    <div class="brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        <path d="M8 9h8M8 13h5"></path>
+      </svg>
+      <span>{{ app_name }}</span>
+    </div>
+
+    <h1>登录</h1>
+    <p class="sub">使用账号登录，开始向知识库提问</p>
+
+    <div class="form-error" id="formError"></div>
+
+    <form id="loginForm" novalidate>
+      <div class="mb-3">
+        <label class="form-label" for="username">用户名</label>
+        <input class="form-control" id="username" name="username" autocomplete="username" placeholder="请输入用户名" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="password">密码</label>
+        <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" required>
+      </div>
+      <button class="btn btn-primary w-100" id="submitBtn" type="submit">登录</button>
+    </form>
+
+    <div class="switch">还没有账号？<a href="/register">立即注册</a></div>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const form = document.getElementById('loginForm');
+  const errorBox = document.getElementById('formError');
+  const submitBtn = document.getElementById('submitBtn');
+
+  function showError(message) {
+    errorBox.textContent = message;
+    errorBox.classList.add('show');
+  }
+
+  // 已登录用户直接进入对话页
+  if (Auth.getToken()) {
+    authFetch('/api/auth/me')
+      .then(() => { location.href = '/chat'; })
+      .catch(() => Auth.clearSession());
+  }
+
+  if (new URLSearchParams(location.search).get('registered') === '1') {
+    showToast('注册成功，请使用新账号登录', 'success');
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    errorBox.classList.remove('show');
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    if (!username || !password) {
+      showError('请输入用户名和密码');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '登录中…';
+    try {
+      const data = await authFetch('/api/auth/login', {
+        method: 'POST',
+        body: { username, password },
+      });
+      Auth.setSession(data.access_token, {
+        username: data.username,
+        role: data.role,
+      });
+      location.href = '/chat';
+    } catch (err) {
+      showError(err.message || '登录失败，请稍后重试');
+      submitBtn.disabled = false;
+      submitBtn.textContent = '登录';
+    }
+  });
+</script>
+{% endblock %}

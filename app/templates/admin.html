@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}用户管理 · {{ app_name }}{% endblock %}
+{% block page %}admin{% endblock %}
+
+{% block body %}
+<main class="page-wrap">
+  <div id="pageBody">
+    <div class="page-head">
+      <div>
+        <h1>用户管理</h1>
+        <p class="sub">查看系统运行概览，管理用户角色；系统会保留至少一名管理员</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-outline-secondary btn-sm" id="refreshBtn" type="button">
+          <i class="bi bi-arrow-clockwise me-1"></i>刷新
+        </button>
+      </div>
+    </div>
+
+    <div class="stat-grid" id="statGrid">
+      <div class="stat-card"><div class="label">用户数</div><div class="value" id="statUsers">—</div><div class="hint">已注册账号</div></div>
+      <div class="stat-card"><div class="label">文档数</div><div class="value" id="statDocs">—</div><div class="hint">知识库文档</div></div>
+      <div class="stat-card"><div class="label">会话数</div><div class="value" id="statConvs">—</div><div class="hint">累计咨询会话</div></div>
+      <div class="stat-card"><div class="label">消息数</div><div class="value" id="statMsgs">—</div><div class="hint">问答消息总数</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">用户列表</div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th style="width:32%">用户名</th>
+              <th style="width:16%">当前角色</th>
+              <th style="width:28%">注册时间</th>
+              <th style="width:24%" class="text-end">调整角色</th>
+            </tr>
+          </thead>
+          <tbody id="userBody"></tbody>
+        </table>
+      </div>
+      <div id="userState"></div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/admin.js"></script>
+{% endblock %}
