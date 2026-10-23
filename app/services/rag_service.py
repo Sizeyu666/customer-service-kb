@@ -18,6 +18,7 @@ from langchain_classic.chains.combine_documents import create_stuff_documents_ch
 from langchain_core.documents import Document as LCDocument
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.retrievers import BaseRetriever
 
 from app.config import CHUNK_SEPARATORS, get_settings
 
@@ -25,16 +26,36 @@ logger = logging.getLogger(__name__)
 
 COLLECTION_NAME = "customer_kb"
 
+# 余弦距离阈值：bge-small-zh 相关片段距离通常 < 1.0，无关片段 > 1.3
+RELEVANCE_DISTANCE_THRESHOLD = 1.0
+
+
+class DistanceThresholdRetriever(BaseRetriever):
+    """按余弦距离过滤的检索器：只返回距离不超过阈值的片段。"""
+
+    store: object  # langchain_chroma.Chroma 实例
+    k: int
+    distance_threshold: float = RELEVANCE_DISTANCE_THRESHOLD
+
+    def _get_relevant_documents(self, query: str, *, run_manager=None):
+        docs_and_scores = self.store.similarity_search_with_score(query, k=self.k)
+        return [doc for doc, score in docs_and_scores if score <= self.distance_threshold]
+
+    async def _aget_relevant_documents(self, query: str, *, run_manager=None):
+        return self._get_relevant_documents(query, run_manager=run_manager)
+
 # 未检索到依据时的固定话术（防幻觉核心）
 FALLBACK_ANSWER = "您好，该问题暂未在知识库中找到相关内容，建议您联系人工客服处理，谢谢。"
 
-SYSTEM_PROMPT = """你是「企业客服助手」，只依据下面提供的知识库片段回答客户问题。
+SYSTEM_PROMPT = """你是「企业客服助手」，需要严格依据下面提供的知识库片段回答客户问题。
 
 规则：
-1. 只能使用知识片段中的信息回答，禁止编造、推测或补充片段之外的内容。
-2. 如果片段中没有能够回答该问题的依据，必须原样回复：{fallback}
-3. 使用简体中文回答，语气专业、简洁，可在必要时分点说明。
-4. 不要在回答中输出「参考来源」，系统会自动附加。
+1. 优先使用知识片段中的信息直接作答，答案要完整、具体，可分点说明。
+2. 只能使用知识片段中的信息，禁止编造、推测或补充片段之外的内容。
+3. 仅当所有片段都与问题毫无关系、确实找不到任何依据时，才原样回复：{fallback}
+4. 使用简体中文回答，语气专业、简洁。
+5. 不要在回答中输出「参考来源」字样，系统会自动附加。
+6. 不要输出"请补充"、"请明确"、"无法回答"等含糊话术；要么基于片段直接回答，要么原样输出第 3 条的话术。
 
 知识片段：
 {context}
@@ -113,8 +134,9 @@ class RagService:
                 check_embedding_ctx_length=False,
             )
         else:
-            # 未配置镜像时使用国内镜像，模型已预下载到本地缓存，可离线加载
-            os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
+            # 模型已预下载到本地缓存，强制离线加载，避免向 HF Hub 发起网络请求导致卡顿
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
+            os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
             from langchain_huggingface import HuggingFaceEmbeddings
 
             self._embeddings = HuggingFaceEmbeddings(
@@ -153,7 +175,7 @@ class RagService:
             model=self.settings.deepseek_model,
             api_key=self.settings.deepseek_api_key,
             base_url=self.settings.deepseek_base_url,
-            temperature=0.2,
+            temperature=0.0,
             timeout=60,
             max_retries=1,
         )
@@ -331,8 +353,10 @@ class RagService:
             return self._qa_chain
 
         llm = self._ensure_llm()
-        retriever = self._ensure_store().as_retriever(
-            search_kwargs={"k": self.settings.top_k}
+        retriever = DistanceThresholdRetriever(
+            store=self._ensure_store(),
+            k=self.settings.top_k,
+            distance_threshold=RELEVANCE_DISTANCE_THRESHOLD,
         )
 
         condense_prompt = ChatPromptTemplate.from_messages(
@@ -400,6 +424,41 @@ class RagService:
             name = (doc.metadata or {}).get("filename")
             if name and name not in sources:
                 sources.append(name)
+
+        # 拒答关键词：模型可能用变体话术表达"无法回答"
+        refusal_keywords = ("暂未在知识库", "请补充", "请明确", "无法回答", "没有相关内容", "联系人工客服")
+
+        def _is_refusal(text: str) -> bool:
+            return any(kw in text for kw in refusal_keywords)
+
+        # 检索不到任何相关片段（低于阈值），直接返回固定话术，不带来源
+        if not sources:
+            return {"answer": FALLBACK_ANSWER, "sources": []}
+
+        # 检索到了来源但模型仍拒答，用更强提示重试一次
+        if _is_refusal(answer) and not answer.startswith(FALLBACK_ANSWER[:12]):
+            try:
+                context_text = "\n\n".join(
+                    (d.page_content or "") for d in (result.get("context") or [])
+                )
+                retry_msgs = [
+                    (
+                        "system",
+                        SYSTEM_PROMPT.replace("{context}", context_text)
+                        + "\n\n重要：上面的知识片段已包含与用户问题相关的内容，请直接基于片段完整作答，不要回复无依据或请补充之类的话术。",
+                    ),
+                    ("human", question),
+                ]
+                retry_resp = self._ensure_llm().invoke(retry_msgs)
+                retry_answer = (retry_resp.content or "").strip()
+                if retry_answer and not _is_refusal(retry_answer):
+                    answer = retry_answer
+            except Exception:
+                logger.exception("拒答重试失败，保留原回答")
+
+        # 最终仍是拒答变体，归一化为固定话术且不附带来源
+        if _is_refusal(answer):
+            return {"answer": FALLBACK_ANSWER, "sources": []}
 
         if sources and "参考来源" not in answer:
             answer = f"{answer}\n\n参考来源：{'、'.join(sources)}"

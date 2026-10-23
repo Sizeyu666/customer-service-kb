@@ -15,6 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.config import get_settings
 from app.database import init_db
 from app.routers import admin, auth, chat, documents, pages
+from app.services.rag_service import RagService
 
 logging.basicConfig(
     level=logging.INFO,
@@ -52,6 +53,12 @@ async def lifespan(_: FastAPI):
     for directory in (settings.upload_dir, settings.vector_store_dir):
         Path(directory).mkdir(parents=True, exist_ok=True)
     init_db()
+    # 预热向量化模型：避免首次问答因加载 bge 阻塞数十秒
+    try:
+        RagService.instance()._ensure_embeddings()
+        logger.info("向量化模型预热完成，首次问答将快速响应")
+    except Exception as exc:
+        logger.warning("向量化模型预热失败，将在首次问答时懒加载：%s", exc)
     logger.info("%s 启动完成", settings.app_name)
     yield
 
