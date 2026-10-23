@@ -14,6 +14,24 @@
 - **管理后台**（管理员）：用户列表与角色调整（保留最后一名管理员）、数据看板（用户 / 文档 / 会话 / 消息数）。
 - **工程化**：统一响应格式与全局中文异常处理、Swagger 接口文档（`/docs`）、pytest 基础测试、Docker Compose 一键部署、数据卷持久化。
 
+## 功能演示
+
+| 登录页 | RAG 问答（退换货流程 + 参考来源） |
+|:---:|:---:|
+| ![登录页](screenshots/01-login.png) | ![RAG 问答](screenshots/02-chat-retrieve.png) |
+
+| 多轮追问（多少天内退货） | 知识库外正确拒答 |
+|:---:|:---:|
+| ![多轮追问](screenshots/03-chat-followup.png) | ![拒答](screenshots/04-chat-refusal.png) |
+
+| 知识库管理（2 份文档就绪） | 管理后台（统计卡片 + 用户列表） |
+|:---:|:---:|
+| ![知识库管理](screenshots/05-documents.png) | ![管理后台](screenshots/06-admin.png) |
+
+| 对话历史列表 | |
+|:---:|:---:|
+| ![历史记录](screenshots/07-history.png) | |
+
 ## 技术栈
 
 | 层 | 技术 |
